@@ -1,0 +1,50 @@
+import streamlit as st
+import pandas as pd
+
+def simular_parcelamento(valor_a_vista, valor_total_parcelado, n_parcelas, saldo_inicial, taxa_anual):
+    taxa_mensal = (1 + taxa_anual / 100) ** (1 / 12) - 1
+    parcela = valor_total_parcelado / n_parcelas
+    saldo = saldo_inicial
+    saldo_mensal = []
+
+    for mes in range(1, n_parcelas + 1):
+        # Paga parcela apenas se houver saldo suficiente, senão assume saldo zero
+        pago = min(parcela, saldo)
+        saldo -= pago
+        saldo *= (1 + taxa_mensal)
+        saldo_mensal.append(saldo)
+
+    saldo_final = saldo
+    valor_total_com_parcelas = saldo_final + valor_total_parcelado
+    return saldo_mensal, valor_total_com_parcelas
+
+# --- Interface Streamlit ---
+st.title("💸 Calculadora: À Vista ou Parcelado com Investimento Realista")
+
+valor_a_vista = st.number_input("Digite o valor à vista (R$):", min_value=0.0, step=100.0)
+valor_total_parcelado = st.number_input("Digite o valor total parcelado (R$):", min_value=0.0, step=100.0)
+n_parcelas = st.number_input("Digite a quantidade de parcelas:", min_value=1, step=1)
+saldo_inicial = st.number_input("Quanto você tem disponível para investir agora (R$):", min_value=0.0, step=100.0)
+taxa_anual = st.number_input("Digite a taxa anual do investimento (%):", min_value=0.0, step=0.1, value=13.0)
+
+if st.button("Calcular"):
+    saldo_mensal, valor_total_com_parcelas = simular_parcelamento(
+        valor_a_vista, valor_total_parcelado, n_parcelas, saldo_inicial, taxa_anual
+    )
+
+    st.subheader("📈 Saldo mês a mês:")
+    df = pd.DataFrame({
+        "Mês": list(range(1, n_parcelas + 1)),
+        "Saldo após parcela e rendimento (R$)": saldo_mensal
+    })
+    st.table(df)
+    st.line_chart(df.set_index("Mês"))
+
+    st.subheader("💰 Resultado final:")
+    st.write(f"Valor à vista: R$ {valor_a_vista:.2f}")
+    st.write(f"Valor final considerando parcelamento e rendimento: R$ {valor_total_com_parcelas:.2f}")
+
+    if valor_total_com_parcelas > valor_a_vista:
+        st.success("✅ Melhor PARCELAR e investir a diferença.")
+    else:
+        st.success("✅ Melhor pagar À VISTA.")
